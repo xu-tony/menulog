@@ -8,4 +8,5 @@ install:
   - curl -s https://getcomposer.org/installer | php
   - php composer.phar install
 
+
 script: phpunit -c module/Menulog/test/phpunit.xml --coverage-text
