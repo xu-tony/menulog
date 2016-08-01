@@ -25,7 +25,7 @@ interface RestaurantsServiceInterface
      * @param $restaurantId
      * @return Restaurant
      */
-    public function getRestaurantDetails($restaurantId);
+    public function getRestaurantProducts($restaurantId);
 
 
 }

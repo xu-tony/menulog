@@ -10,6 +10,7 @@ namespace Menulog\Factory;
 
 
 use Menulog\Mapper\JeApi;
+use Zend\Cache\StorageFactory;
 use Zend\Http\Client;
 use Zend\ServiceManager\FactoryInterface;
 use Zend\ServiceManager\ServiceLocatorInterface;
@@ -26,7 +27,8 @@ class RestaurantsMapperFactory implements FactoryInterface
     public function createService(ServiceLocatorInterface $serviceLocator)
     {
         return new JeApi(
-            new Client()
+            new Client(),
+            $serviceLocator->get('Menulog\Cache')
         );
     }
 }

@@ -58,7 +58,8 @@ return array(
     'service_manager' => array(
         'factories' => array(
             'Menulog\Service\RestaurantsServiceInterface' => 'Menulog\Factory\RestaurantsServiceFactory',
-            'Menulog\Mapper\RestaurantsMapperInterface'   => 'Menulog\Factory\RestaurantsMapperFactory'
+            'Menulog\Mapper\RestaurantsMapperInterface'   => 'Menulog\Factory\RestaurantsMapperFactory',
+            'Menulog\Cache'                               => 'Menulog\Factory\CacheFactory',
         ),
         'aliases' => array(
             'translator' => 'MvcTranslator',

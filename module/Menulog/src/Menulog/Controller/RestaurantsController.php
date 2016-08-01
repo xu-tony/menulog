@@ -50,7 +50,7 @@ class RestaurantsController extends AbstractActionController
     public function detailsAction()
     {
         $restaurantId = 61642;
-        $restaurant = $this->restaurantsService->getRestaurantDetails($restaurantId);
+        $restaurant = $this->restaurantsService->getRestaurantProducts($restaurantId);
         return new JsonModel($restaurant->toArray());
     }
 

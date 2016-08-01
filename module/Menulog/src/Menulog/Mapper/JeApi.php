@@ -14,6 +14,7 @@ use Menulog\Model\Product;
 use Menulog\Model\ProductCategory;
 use Menulog\Model\Restaurant;
 use Menulog\Model\Image;
+use Zend\Cache\Storage\Adapter\AbstractAdapter as AbstractCacheAdapter;
 use Zend\Http\Client;
 use Zend\Http\Request;
 
@@ -41,9 +42,16 @@ class JeApi implements RestaurantsMapperInterface
     protected $httpOptions;
 
     /**
-     * @param Client $httpClient
+     * @var $cache
      */
-    public function __construct(Client $httpClient)
+    protected $cache;
+
+
+    /**
+     * @param Client $httpClient
+     * @param AbstractCacheAdapter $cache
+     */
+    public function __construct(Client $httpClient, AbstractCacheAdapter $cache)
     {
         $this->baseUri = "https://public.je-apis.com";
 
@@ -56,11 +64,11 @@ class JeApi implements RestaurantsMapperInterface
         );
         $this->httpOptions = array(
             'maxredirects' => 0,
-            'timeout'      => 30
+            'timeout'      => 5
         );
 
         $this->httpClient = $httpClient;
-
+        $this->cache = $cache;
     }
 
     /**
@@ -69,26 +77,44 @@ class JeApi implements RestaurantsMapperInterface
      */
     public function getRestaurants($postcode)
     {
-        $uri = $this->baseUri.'/restaurants';
-        $requestParams = array(
-            'q' => urlencode($postcode)
-        );
-        $httpMethod = Request::METHOD_GET;
-        $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
-        $restaurants = array();
-        if ($result && array_key_exists('Restaurants', $result)) {
+        $redisKey = 'restaurants_postcode_'.$postcode;
 
-            foreach($result['Restaurants'] as $restaurantArr){
-                if ($restaurantArr['IsOpenNowForDelivery'] == true){
-                    $restaurant = new Restaurant();
-                    $restaurant->setId($restaurantArr['Id']);
-                    $restaurant->setName($restaurantArr['Name']);
-                    $restaurant->setUniqueName($restaurantArr['UniqueName']);
-                    $logo = new Image();
-                    $logo->setStandardResolutionURL($restaurantArr['Logo'][0]['StandardResolutionURL']);
-                    $restaurant->setLogo($logo);
-                    $restaurant->setRatingAverage($restaurantArr['RatingAverage']);
-                    $restaurants[] = $restaurant;
+        if ($this->cache->hasItem($redisKey) && $this->cache->getItem($redisKey)) {
+
+            $result = $this->cache->getItem($redisKey);
+
+        } else {
+            $uri = $this->baseUri.'/restaurants';
+            $requestParams = array(
+                'q' => urlencode($postcode)
+            );
+            $httpMethod = Request::METHOD_GET;
+            $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+            // if response has content, we save to redis for 1 hour
+            if ($result) {
+                $this->cache->getOptions()->setTtl(60*60); // save for 1 hour
+                $this->cache->setItem($redisKey, $result);
+            }
+        }
+
+        $restaurants = array();
+        if ($result) {
+            // parse the json
+            $resultDecode = json_decode($result, true);
+            if ($resultDecode && array_key_exists('Restaurants', $resultDecode)) {
+                foreach($resultDecode['Restaurants'] as $restaurantArr){
+                    if ($restaurantArr['IsOpenNowForDelivery'] == true){
+                        $restaurant = new Restaurant();
+                        $restaurant->setId($restaurantArr['Id']);
+                        $restaurant->setName($restaurantArr['Name']);
+                        $restaurant->setUniqueName($restaurantArr['UniqueName']);
+                        $logo = new Image();
+                        $logo->setStandardResolutionURL($restaurantArr['Logo'][0]['StandardResolutionURL']);
+                        $restaurant->setLogo($logo);
+                        $restaurant->setRatingAverage($restaurantArr['RatingAverage']);
+                        $restaurant->setIsOpenNowForDelivery($restaurantArr['IsOpenNowForDelivery']);
+                        $restaurants[] = $restaurant;
+                    }
                 }
             }
         }
@@ -101,20 +127,36 @@ class JeApi implements RestaurantsMapperInterface
      */
     public function getRestaurantMenus($restaurantId)
     {
-        $uri = $this->baseUri.'/restaurants/'.$restaurantId.'/menus';
-        $requestParams = array();
-        $httpMethod = Request::METHOD_GET;
-        $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
-        $menus = array();
-        if ($result && array_key_exists('Menus', $result)) {
-            foreach($result['Menus'] as $menuArr){
-                $menu = new Menu();
-                $menu->setId($menuArr['Id']);
-                $menu->setTitle($menuArr['Title']);
-                $menu->setDescription($menuArr['Description']);
-                $menus[] = $menu;
+        $redisKey = 'restaurant_menus_'.$restaurantId;
+
+        if ($this->cache->hasItem($redisKey) && $this->cache->getItem($redisKey)) {
+
+            $result = $this->cache->getItem($redisKey);
+        } else {
+            $uri = $this->baseUri.'/restaurants/'.$restaurantId.'/menus';
+            $requestParams = array();
+            $httpMethod = Request::METHOD_GET;
+            $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+            if ($result) {
+                $this->cache->getOptions()->setTtl(60*60); // save for 1 hour
+                $this->cache->setItem($redisKey, $result);
             }
         }
+
+        $menus = array();
+        if ($result) {
+            $resultDecode = json_decode($result, true);
+            if ($resultDecode && array_key_exists('Menus', $resultDecode)) {
+                foreach($resultDecode['Menus'] as $menuArr){
+                    $menu = new Menu();
+                    $menu->setId($menuArr['Id']);
+                    $menu->setTitle($menuArr['Title']);
+                    $menu->setDescription($menuArr['Description']);
+                    $menus[] = $menu;
+                }
+            }
+        }
+
         return $menus;
     }
 
@@ -124,20 +166,36 @@ class JeApi implements RestaurantsMapperInterface
      */
     public function getRestaurantMenuCategories($menuId)
     {
-        $uri = $this->baseUri.'/menus/'.$menuId.'/productcategories';
-        $requestParams = array();
-        $httpMethod = Request::METHOD_GET;
-        $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+        $redisKey = 'menu_'.$menuId.'_categories';
 
-        $productCategories = array();
-        if ($result && array_key_exists('Categories', $result)) {
-            foreach($result['Categories'] as $category){
-                $productCategory = new ProductCategory();
-                $productCategory->setId($category['Id']);
-                $productCategory->setName($category['Name']);
-                $productCategories[] = $productCategory;
+        if ($this->cache->hasItem($redisKey) && $this->cache->getItem($redisKey)) {
+
+            $result = $this->cache->getItem($redisKey);
+        } else {
+
+            $uri = $this->baseUri.'/menus/'.$menuId.'/productcategories';
+            $requestParams = array();
+            $httpMethod = Request::METHOD_GET;
+            $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+            if ($result) {
+                $this->cache->getOptions()->setTtl(60*60); // save for 1 hour
+                $this->cache->setItem($redisKey, $result);
             }
         }
+
+        $productCategories = array();
+        if ($result) {
+            $resultDecode = json_decode($result, true);
+            if ($resultDecode && array_key_exists('Categories', $resultDecode)) {
+                foreach($resultDecode['Categories'] as $category){
+                    $productCategory = new ProductCategory();
+                    $productCategory->setId($category['Id']);
+                    $productCategory->setName($category['Name']);
+                    $productCategories[] = $productCategory;
+                }
+            }
+        }
+
         return $productCategories;
     }
 
@@ -148,23 +206,38 @@ class JeApi implements RestaurantsMapperInterface
      */
     public function getRestaurantMenuProductCategoryProducts($menuId, $productCategoryId)
     {
-        $uri = $this->baseUri.'/menus/'.$menuId.'/productcategories/'.$productCategoryId.'/products';
-        $requestParams = array();
-        $httpMethod = Request::METHOD_GET;
-        $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+        $redisKey = 'menu_'.$menuId.'_category_'.$productCategoryId.'_products';
 
-        $products = array();
-        if ($result && array_key_exists('Products', $result)) {
-            foreach($result['Products'] as $productArr){
-                $product = new Product();
-                $product->setId($productArr['Id']);
-                $product->setName($productArr['Name']);
-                $product->setDescription($productArr['Description']);
-                $product->setPrice($productArr['Price']);
-                $product->setSynonym($productArr['Synonym']);
-                $products[] = $product;
+        if ($this->cache->hasItem($redisKey) && $this->cache->getItem($redisKey)) {
+
+            $result = $this->cache->getItem($redisKey);
+        } else {
+            $uri = $this->baseUri.'/menus/'.$menuId.'/productcategories/'.$productCategoryId.'/products';
+            $requestParams = array();
+            $httpMethod = Request::METHOD_GET;
+            $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+            if ($result) {
+                $this->cache->getOptions()->setTtl(60*60); // save for 1 hour
+                $this->cache->setItem($redisKey, $result);
             }
         }
+
+        $products = array();
+        if ($result) {
+            $resultDecode = json_decode($result, true);
+            if ($resultDecode && array_key_exists('Products', $resultDecode)) {
+                foreach($resultDecode['Products'] as $productArr){
+                    $product = new Product();
+                    $product->setId($productArr['Id']);
+                    $product->setName($productArr['Name']);
+                    $product->setDescription($productArr['Description']);
+                    $product->setPrice($productArr['Price']);
+                    $product->setSynonym($productArr['Synonym']);
+                    $products[] = $product;
+                }
+            }
+        }
+
 
         return $products;
     }
@@ -175,14 +248,31 @@ class JeApi implements RestaurantsMapperInterface
      */
     public function getRestaurantDetails($restaurantId)
     {
-        $uri = $this->baseUri.'/restaurants/'.$restaurantId.'/details';
-        $requestParams = array();
-        $httpMethod = Request::METHOD_GET;
-        $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+        $redisKey = 'restaurant_details_'.$restaurantId;
+
+        if ($this->cache->hasItem($redisKey) && $this->cache->getItem($redisKey)) {
+
+            $result = $this->cache->getItem($redisKey);
+
+        } else {
+            $uri = $this->baseUri.'/restaurants/'.$restaurantId.'/details';
+            $requestParams = array();
+            $httpMethod = Request::METHOD_GET;
+            $result = $this->sendHttpRequest($uri, $httpMethod, $requestParams);
+
+            if ($result) {
+                $this->cache->getOptions()->setTtl(60*60); // save for 1 hour
+                $this->cache->setItem($redisKey, $result);
+            }
+        }
+
         $restaurant = new Restaurant();
-        if ($result && array_key_exists('Id', $result)) {
-            $restaurant->setId($restaurantId);
-            $restaurant->setDescription($result['Description']);
+        if ($result) {
+            $resultDecode = json_decode($result, true);
+            if ($resultDecode && array_key_exists('Id', $resultDecode)) {
+                $restaurant->setId($restaurantId);
+                $restaurant->setDescription($result['Description']);
+            }
         }
 
         return $restaurant;
@@ -204,10 +294,9 @@ class JeApi implements RestaurantsMapperInterface
         $this->httpClient->setHeaders($this->httpHeaders);
         $this->httpClient->setOptions($this->httpOptions);
         $response = $this->httpClient->send();
-        $json = $response->getBody();
-        $result = json_decode($json, true);
+        $jsonBody = $response->getBody();
         // need to reset httpclient after each request
         $this->httpClient->reset();
-        return $result;
+        return $jsonBody;
     }
 }
