@@ -53,3 +53,8 @@ table tr:nth-child(even) {
     margin-top: 30px;
     margin-bottom: 30px;
 }
+
+.spin-centered{
+    float: none;
+    margin: 0 auto;
+}

@@ -1,7 +1,8 @@
 <div ng-app="menulog" ng-controller="restaurantDetail">
-
-    <div class="col-sm-12 col-sm-offset-3">
-        <img id="mySpinner" src="<?php echo $this->basePath('img/spinner.gif') ?>" ng-show="loading" >
+    <div class="row">
+        <div class="col-lg-1  spin-centered">
+            <img id="mySpinner" src="<?php echo $this->basePath('img/spinner.gif') ?>" ng-show="loading" >
+        </div>
     </div>
 
     <input ng-init="getDetail(<?php echo $id?>)" type="hidden">
