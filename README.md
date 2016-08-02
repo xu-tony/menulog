@@ -43,6 +43,7 @@ project and you should be ready to go! It should look something like below:
 PHPUnit test CodeCoverage
 -------------------------
 
+https://travis-ci.org/xu-tony/menulog
 
  Summary:
   Classes:  0.00% (0/13)

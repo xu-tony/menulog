@@ -271,7 +271,7 @@ class JeApi implements RestaurantsMapperInterface
             $resultDecode = json_decode($result, true);
             if ($resultDecode && array_key_exists('Id', $resultDecode)) {
                 $restaurant->setId($restaurantId);
-                $restaurant->setDescription($result['Description']);
+                $restaurant->setDescription($resultDecode['Description']);
             }
         }
 

@@ -33,7 +33,8 @@ class RestaurantsController extends AbstractActionController
      */
     public function restaurantsAction()
     {
-        $postCode = 'se19';
+        $postCode = $this->getRequest()->getQuery('q');
+        $postCode = strip_tags($postCode);
         $restaurants = $this->restaurantsService->getRestaurants($postCode);
         $result = array();
         if ($restaurants) {
@@ -47,12 +48,17 @@ class RestaurantsController extends AbstractActionController
     /**
      * @return JsonModel
      */
-    public function detailsAction()
+    public function restaurantGetAction()
     {
-        $restaurantId = 61642;
+        //$restaurantId = 61642;
+        $restaurantId = $this->params()->fromRoute('id');
         $restaurant = $this->restaurantsService->getRestaurantProducts($restaurantId);
         return new JsonModel($restaurant->toArray());
     }
 
-
+    public function restaurantAction()
+    {
+        $restaurantId = $this->params()->fromRoute('id');
+        return new ViewModel(array('id'=>$restaurantId));
+    }
 }

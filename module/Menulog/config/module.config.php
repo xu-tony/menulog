@@ -29,7 +29,7 @@ return array(
                 ),
                 'may_terminate' => true,
                 'child_routes' => array(
-                    'details' => array(
+                    'detailsView' => array(
                         'type'    => 'segment',
                         'options' => array(
                             'route'    => '[/:id]',
@@ -37,7 +37,19 @@ return array(
                                 'id' => '[0-9]\d*'
                             ),
                             'defaults' => array(
-                                'action' => 'details',
+                                'action' => 'restaurant',
+                            ),
+                        )
+                    ),
+                    'detailsDetail' => array(
+                        'type'    => 'segment',
+                        'options' => array(
+                            'route'    => '/get[/:id]',
+                            'constrains' => array(
+                                'id' => '[0-9]\d*'
+                            ),
+                            'defaults' => array(
+                                'action' => 'restaurantGet',
                             ),
                         )
                     ),

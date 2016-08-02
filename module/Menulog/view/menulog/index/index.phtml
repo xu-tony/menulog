@@ -1,1 +1,59 @@
+<div ng-app="menulog" ng-controller="restaurantSearch">
+    <div class="container searchbox">
+        <div class="row">
+            <div class="col-sm-6 col-sm-offset-3">
+                <div id="imaginary_container">
+                    <form name="searchForm" ng-submit="requestRestaurants()">
+                        <div class="input-group stylish-input-group">
+
+                            <!--need to do ng custom validation here-->
+
+                            <input type="text" name="postCodeInput" class="form-control" ng-model="postcode" placeholder="Enter your postcode" required>
+                            <span class="input-group-addon">
+                                <button type="submit">
+                                    <span class="glyphicon glyphicon-search"></span>
+                                </button>
+                            </span>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-sm-12 col-sm-offset-3">
+                    <img id="mySpinner" src="<?php echo $this->basePath('img/spinner.gif') ?>" ng-show="loading" >
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="col-sm-6 col-sm-offset-3" ng-show="loading==false">
+
+            <div>Searched results (<span ng-bind="restaurants.length"></span>)</div>
+
+            <table style="width:100%">
+                <tr>
+                    <th>logo</th>
+                    <th ng-click="orderByMe('-id')">id</th>
+                    <th ng-click="orderByMe('name')">name</th>
+                    <th ng-click="orderByMe('-rating_average')">rating</th>
+                </tr>
+
+                <!--need to do ng sanitize here-->
+
+                <tr ng-repeat="x in restaurants | orderBy:myOrderBy">
+                    <td><img ng-src="{{ x.logo.standardResolutionURL }}"></td>
+                    <td>{{ x.id }}</td>
+                    <td><a href="/restaurants/{{x.id}}">{{ x.name }}</a></td>
+                    <td>{{ x.rating_average }}</td>
+                </tr>
+            </table>
+
+        </div>
+        <div ng-if="restaurants.length == 0" class="col-sm-6 col-sm-offset-3" >
+            <div>Sorry we don't have any searchable results for that postcode</div>
+        </div>
+
+    </div>
+
+</div>
+
 

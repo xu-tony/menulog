@@ -1,0 +1,45 @@
+<div ng-app="menulog" ng-controller="restaurantDetail">
+
+    <div class="col-sm-12 col-sm-offset-3">
+        <img id="mySpinner" src="<?php echo $this->basePath('img/spinner.gif') ?>" ng-show="loading" >
+    </div>
+
+    <input ng-init="getDetail(<?php echo $id?>)" type="hidden">
+
+    <div class="container" ng-show="hasDetail==false">
+        <span>Sorry we don't have any details for this restaurant</span>
+    </div>
+
+    <div class="container" ng-show="hasDetail">
+        <div class="col-sm-8 col-sm-offset-1">
+            <div>{{ restaurantDetail.description }}
+            </div>
+
+            <table style="width:100%">
+                <tr ng-repeat="menu in restaurantDetail.menus">
+                    <td>
+                        <table style="width:100%">
+                            <tr ng-repeat="category in menu.productCategories">
+                                <td>
+                                    <table style="width:100%">
+
+                                        <!--need to do ng sanitize here-->
+
+                                        <tr ng-repeat="product in category.products">
+                                            <td>{{product.name}}</td>
+                                            <td>{{product.synonym}}</td>
+                                            <td>{{product.price}}</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+        </div>
+    </div>
+
+
+</div>
