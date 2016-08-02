@@ -5,9 +5,10 @@ Introduction
 ------------
 This is a simple application using the ZF2 MVC layer and module
 systems. This application is meant to be used as a small restaurant search and their products display.
+This application is deployed in http://54.206.18.76:8000/
 
 Installation
-------------
+============
 
 System Requirement
 ------------------
